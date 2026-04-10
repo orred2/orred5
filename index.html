@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<title>Epson WF-C5890 — 3D Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f0f4f8;--surface:#ffffff;--surface2:#e8edf3;--border:#c8d0da;
+  --text:#1a2333;--text-mid:#4a5568;--text-subtle:#718096;
+  --blue:#0057b8;--green:#1a8c3a;--orange:#c45000;--yellow:#9a6f00;
+  --accent:#0057b8;--accent-light:#1a73d4;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--text);display:flex;flex-direction:column}
+
+.header{height:48px;background:#1d4ed8;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0}
+.hdr-logo{font-family:'Helvetica',sans-serif;font-size:20px;font-weight:800;letter-spacing:.02em;color:#fff}
+.hdr-logo span{color:#fff}
+.hdr-model{font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.04em}
+.hdr-div{width:1px;height:20px;background:rgba(255,255,255,.2)}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.badge{font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7)}
+.hdr-asm-btn{font-size:10px;padding:4px 10px;border-radius:3px;background:#fff;border:none;color:#1d4ed8;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:opacity .15s}
+.hdr-asm-btn:hover{opacity:.85}
+
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* LEFT INFO PANEL */
+.info-panel{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.ip-hdr{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ip-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-mid)}
+.ip-body{flex:1;overflow-y:auto;padding:14px;background:var(--surface)}
+.ip-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text-subtle);text-align:center;padding:20px}
+.ip-empty-icon{font-size:32px;opacity:.4}
+.ip-empty-txt{font-size:11px;line-height:1.6}
+.ip-comp{display:none}
+.ip-comp.active{display:block}
+.ip-icon{font-size:28px;margin-bottom:8px}
+.ip-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.ip-id{font-size:10px;color:var(--accent-light);letter-spacing:.06em;margin-bottom:14px}
+.ip-sec{margin-bottom:14px}
+.ip-sec-title{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-subtle);margin-bottom:7px;font-weight:600}
+.ip-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;gap:8px}
+.ip-row:last-child{border-bottom:none}
+.ip-row-k{color:var(--text-mid);flex-shrink:0}
+.ip-row-v{color:var(--text);text-align:right;line-height:1.4}
+.ip-note{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;font-size:11px;color:var(--text-mid);line-height:1.6;margin-top:8px}
+.tag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;margin:2px}
+.t-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.t-green{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.t-orange{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}
+.t-yellow{background:#fef9c3;color:#854d0e;border:1px solid #fde047}
+
+/* VIEWER */
+.viewer-wrap{flex:1;position:relative;overflow:hidden}
+#canvas{display:block;width:100%;height:100%}
+
+/* DOTS */
+.ann-dot{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--accent-light);border:2px solid #fff;cursor:pointer;transform:translate(-50%,-50%);z-index:50;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s,opacity .2s,background .15s;white-space:nowrap}
+.ann-dot:hover{transform:translate(-50%,-50%) scale(1.25);background:var(--blue)}
+.ann-dot.active{background:var(--blue);box-shadow:0 0 0 4px rgba(0,87,184,.25),0 2px 8px rgba(0,0,0,.3)}
+.ann-dot.hidden{opacity:0;pointer-events:none}
+
+.ctrl-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:4px;padding:6px 14px;font-size:10px;color:var(--text-mid);display:flex;gap:14px;pointer-events:none;backdrop-filter:blur(4px)}
+.ch-key{background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:1px 5px;font-size:9px;color:var(--text)}
+
+/* RIGHT PANEL */
+.side-panel{width:220px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sp-card{border-bottom:1px solid var(--border)}
+.sp-card-hdr{padding:10px 12px;display:flex;align-items:center;gap:8px}
+.sp-card-icon{font-size:13px}
+.sp-card-title{font-size:10.5px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:.07em}
+.sp-card-body{padding:0 12px 12px;font-size:11px;color:var(--text-subtle);line-height:1.6}
+
+#loading{position:absolute;inset:0;background:#1a2333;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:200}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent-light);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:11px;color:var(--text-mid)}
+.load-progress{font-size:10px;color:var(--text-subtle);margin-top:4px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ─── ASSEMBLY OVERLAY ─── */
+#asm-overlay{
+  position:absolute;inset:0;z-index:100;
+  background:rgba(10,18,35,.92);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+  backdrop-filter:blur(3px);
+}
+#asm-overlay.visible{display:flex}
+
+.asm-panel{
+  width:520px;max-width:95vw;
+  background:var(--surface);border-radius:6px;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;
+}
+.asm-header{
+  background:#1d4ed8;padding:14px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.asm-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;letter-spacing:.05em}
+.asm-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1;padding:0 4px}
+.asm-close:hover{color:#fff}
+
+.asm-steps{display:flex;padding:18px 18px 0;gap:0;border-bottom:1px solid var(--border)}
+.asm-step-tab{
+  flex:1;text-align:center;padding:8px 6px 10px;cursor:pointer;
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-subtle);border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;
+}
+.asm-step-tab:hover{color:var(--text-mid)}
+.asm-step-tab.active{color:#1d4ed8;border-bottom-color:#1d4ed8}
+.asm-step-num{display:block;font-size:18px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:3px;color:inherit}
+
+.asm-content{padding:18px;min-height:220px;position:relative}
+
+.asm-pane{display:none;animation:asmFade .25s ease}
+.asm-pane.active{display:flex;gap:16px;align-items:flex-start}
+@keyframes asmFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.asm-visual{
+  width:100px;flex-shrink:0;height:100px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;font-size:42px;
+}
+.asm-info{flex:1}
+.asm-step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.asm-step-desc{font-size:11px;color:var(--text-mid);line-height:1.7;margin-bottom:10px}
+.asm-checklist{list-style:none;display:flex;flex-direction:column;gap:5px}
+.asm-checklist li{font-size:11px;color:var(--text-mid);display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+.asm-checklist li::before{content:'✓';color:#1a8c3a;font-weight:700;flex-shrink:0;margin-top:1px}
+
+.asm-footer{
+  padding:12px 18px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface2);
+}
+.asm-nav{display:flex;gap:8px}
+.asm-btn{
+  padding:7px 16px;border-radius:3px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-mid);transition:background .15s,color .15s;
+}
+.asm-btn:hover{background:var(--surface2)}
+.asm-btn.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.asm-btn.primary:hover{background:#1a45c4}
+.asm-btn:disabled{opacity:.4;cursor:not-allowed}
+.asm-prog{font-size:10px;color:var(--text-subtle);display:flex;align-items:center;gap:8px}
+.asm-prog-bar{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.asm-prog-fill{height:100%;background:#1d4ed8;border-radius:2px;transition:width .3s ease}
+
+/* model load error */
+.model-error{
+  position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+  background:#1a2333;color:var(--text-mid);text-align:center;padding:24px;z-index:180;
+}
+.model-error.show{display:flex}
+.model-error-icon{font-size:36px;opacity:.5}
+.model-error-title{font-size:13px;font-weight:600;color:#fff}
+.model-error-msg{font-size:11px;line-height:1.7;max-width:320px}
+.model-error-files{background:#0d1520;border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:left;color:#7dd3fc;line-height:1.9}
+
+.video-wrapper{position:relative;padding-bottom:56.25%;height:0;overflow:hidden}
+.video-wrapper iframe{position:absolute;top:0;left:0;width:100%;height:100%}
+</style>
+</head>
+<body>
+<header class="header">
+<div class="hdr-logo">EPSON <span>WF-C5890</span></div>
+<div class="hdr-div"></div>
+<div class="hdr-model">WorkForce Pro · 3D Explorer</div>
+<div class="hdr-right">
+<span class="badge">Drag to rotate</span>
+<span class="badge">Scroll to zoom</span>
+<span class="badge">Right-drag to pan</span>
+<div class="hdr-div"></div>
+<button class="hdr-asm-btn" onclick="openAssembly()">⚙ Assembly Guide</button>
+</div>
+</header>
+<div class="app-body">
+
+<!-- LEFT INFO PANEL -->
+<div class="info-panel">
+<div class="ip-hdr"><div class="ip-title">Component Info</div></div>
+<div class="ip-body">
+<div class="ip-empty" id="ip-empty">
+<div class="ip-empty-icon">🖨</div>
+<div class="ip-empty-txt">Click a marker on the model to view component details</div>
+</div>
+<div class="ip-comp" id="info-rips">
+<div class="ip-icon">🖌</div>
+<div class="ip-name">Ink Tray A (RIPS)</div>
+<div class="ip-id">INK SUPPLY · FRONT LOWER</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Cartridges</div>
+<div class="ip-row"><span class="ip-row-k">Black (BK)</span><span class="ip-row-v">T10S / T10W / T10Y</span></div>
+<div class="ip-row"><span class="ip-row-k">Cyan (C)</span><span class="ip-row-v">T10S / T10W</span></div>
+<div class="ip-row"><span class="ip-row-k">Magenta (M)</span><span class="ip-row-v">T10S / T10W</span></div>
+<div class="ip-row"><span class="ip-row-k">Yellow (Y)</span><span class="ip-row-v">T10S / T10W</span></div>
+<div class="ip-row"><span class="ip-row-k">Std Capacity (T10S)</span><span class="ip-row-v">~3,000 pages blk/clr</span></div>
+<div class="ip-row"><span class="ip-row-k">High Capacity (T10W)</span><span class="ip-row-v">~5,000 pages blk/clr</span></div>
+<div class="ip-row"><span class="ip-row-k">Extra High Capacity (T10Y)</span><span class="ip-row-v">~10,000 pages blk/clr</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Ink packs align easily within trays. Trays insert with a click. Do not shake or touch chip contacts. Packs are keyed to prevent color mismatch.</div>
+</div>
+<div><span class="tag t-blue">CMYK</span><span class="tag t-orange">Replaceable</span></div>
+</div>
+<div class="ip-comp" id="info-c1">
+<div class="ip-icon">📄</div>
+<div class="ip-name">Cassette 1 (C1)</div>
+<div class="ip-id">PAPER TRAY · FRONT</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Specifications</div>
+<div class="ip-row"><span class="ip-row-k">Capacity</span><span class="ip-row-v">250 sheets</span></div>
+<div class="ip-row"><span class="ip-row-k">Paper Size</span><span class="ip-row-v">A4, Letter, Legal, 4×6</span></div>
+<div class="ip-row"><span class="ip-row-k">Paper Weight</span><span class="ip-row-v">64–90 g/m²</span></div>
+<div class="ip-row"><span class="ip-row-k">Media Type</span><span class="ip-row-v">Plain, Recycled</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Load paper short-edge first, printable side up. Adjust guides snugly. Do not load above the MAX line.</div>
+</div>
+<div><span class="tag t-blue">Input</span><span class="tag t-green">250 sheets</span></div>
+</div>
+<div class="ip-comp" id="info-output">
+<div class="ip-icon">📤</div>
+<div class="ip-name">Output Tray</div>
+<div class="ip-id">PRINT OUTPUT · FRONT</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Specifications</div>
+<div class="ip-row"><span class="ip-row-k">Print Speed</span><span class="ip-row-v">25 ISO ppm (blk/clr)</span></div>
+<div class="ip-row"><span class="ip-row-k">Copy Speed</span><span class="ip-row-v">22 ISO cpm (blk/clr)</span></div>
+<div class="ip-row"><span class="ip-row-k">Auto 2-Sided Print Speed</span><span class="ip-row-v">16 ISO ppm (blk/clr)</span></div>
+<div class="ip-row"><span class="ip-row-k">First Page Out Time (FPOT)</span><span class="ip-row-v">5.3 sec</span></div>
+<div class="ip-row"><span class="ip-row-k">First Set Out Time (FSOT)</span><span class="ip-row-v">14 sec</span></div>
+<div class="ip-row"><span class="ip-row-k">First Copy Out Time (FCOT)</span><span class="ip-row-v">7 sec</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Pull out the extender for larger paper sizes. Remove output regularly to avoid jams.</div>
+</div>
+<div><span class="tag t-green">150 sheets</span><span class="tag t-blue">Output</span></div>
+</div>
+<div class="ip-comp" id="info-ui">
+<div class="ip-icon">🖥</div>
+<div class="ip-name">Control Panel</div>
+<div class="ip-id">TOUCHSCREEN · ANGLED FRONT</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Specifications</div>
+<div class="ip-row"><span class="ip-row-k">Display</span><span class="ip-row-v">4.3" color LCD</span></div>
+<div class="ip-row"><span class="ip-row-k">Type</span><span class="ip-row-v">Capacitive touch</span></div>
+<div class="ip-row"><span class="ip-row-k">Functions</span><span class="ip-row-v">Copy, Scan, Fax, Settings</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Panel angle adjusts for ergonomic use. Admin can lock panel via EPA. Tap home to return to main menu.</div>
+</div>
+<div class="video-wrapper" style="margin-top:10px">
+  <iframe src="https://www.youtube.com/embed/gEFrhEppRpw?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&loop=1&playlist=gEFrhEppRpw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<div><span class="tag t-blue">4.3" LCD</span><span class="tag t-green">Touch</span></div>
+</div>
+<div class="ip-comp" id="info-adf">
+<div class="ip-icon">📋</div>
+<div class="ip-name">ADF Scanner</div>
+<div class="ip-id">AUTO DOCUMENT FEEDER · TOP</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Specifications</div>
+<div class="ip-row"><span class="ip-row-k">Capacity</span><span class="ip-row-v">50 sheets</span></div>
+<div class="ip-row"><span class="ip-row-k">Sides</span><span class="ip-row-v">Single &amp; Duplex</span></div>
+<div class="ip-row"><span class="ip-row-k">Resolution</span><span class="ip-row-v">Up to 1200 dpi</span></div>
+<div class="ip-row"><span class="ip-row-k">Size Range</span><span class="ip-row-v">A5 – Legal</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Fan pages before loading. Align guides to paper width. Remove staples and clips before scanning.</div>
+</div>
+<div><span class="tag t-blue">50 sheets</span><span class="tag t-green">Duplex</span></div>
+</div>
+<div class="ip-comp" id="info-mp">
+<div class="ip-icon">📂</div>
+<div class="ip-name">Rear MP Tray</div>
+<div class="ip-id">MULTIPURPOSE TRAY · TOP REAR</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Specifications</div>
+<div class="ip-row"><span class="ip-row-k">Capacity</span><span class="ip-row-v">80 sheets</span></div>
+<div class="ip-row"><span class="ip-row-k">Max Size</span><span class="ip-row-v">8.5 × 47.2"</span></div>
+<div class="ip-row"><span class="ip-row-k">Paper Weight</span><span class="ip-row-v">64–300 g/m²</span></div>
+<div class="ip-row"><span class="ip-row-k">Envelopes</span><span class="ip-row-v">Yes</span></div>
+<div class="ip-row"><span class="ip-row-k">Thick Media</span><span class="ip-row-v">Yes (cardstock)</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">For specialty media: envelopes, thick paper, labels, banners.</div>
+</div>
+<span class="tag t-orange">Specialty</span>
+</div>
+<div class="ip-comp" id="info-lock">
+<div class="ip-icon">🔒</div>
+<div class="ip-name">Ink Lock</div>
+<div class="ip-id">INK SECURITY · LEFT SIDE</div>
+<div class="ip-sec">
+<div class="ip-sec-title">States</div>
+<div class="ip-row"><span class="ip-row-k">Locked</span><span class="ip-row-v">Tab towards ink packs.</span></div>
+<div class="ip-row"><span class="ip-row-k">Unlocked</span><span class="ip-row-v">Tab pushed outward.</span></div>
+<div class="ip-row"><span class="ip-row-k">Optional for</span><span class="ip-row-v">Shipping / Transport / Security</span></div>
+</div>
+<div class="ip-sec">
+<div class="ip-sec-title">Notes</div>
+<div class="ip-note">Always unlock before first use. Lock before transport to prevent ink leakage. Printer will alert if locked during operation.</div>
+</div>
+<div><span class="tag t-blue">Security</span><span class="tag t-yellow">Optional</span></div>
+</div>
+</div>
+</div>
+
+<!-- 3D VIEWER -->
+<div class="viewer-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="load-txt">Loading 3D models…</div>
+    <div class="load-progress" id="load-progress">Initializing…</div>
+  </div>
+  <!-- Model file error fallback -->
+  <div class="model-error" id="model-error">
+    <div class="model-error-icon">📦</div>
+    <div class="model-error-title">3D Model Files Not Found</div>
+    <div class="model-error-msg">Place the following GLB files in the same folder as this HTML file:</div>
+    <div class="model-error-files">
+      📁 Same folder as this .html<br>
+      ├── printer.glb<br>
+      ├── cassette.glb<br>
+      └── screws.glb
+    </div>
+    <div class="model-error-msg" style="margin-top:4px;font-size:10px;color:var(--text-subtle)">Then reload the page.</div>
+  </div>
+  <div class="ctrl-hint">
+    <div style="display:flex;align-items:center;gap:5px"><span class="ch-key">Drag</span> Rotate</div>
+    <div style="display:flex;align-items:center;gap:5px"><span class="ch-key">Scroll</span> Zoom</div>
+    <div style="display:flex;align-items:center;gap:5px"><span class="ch-key">Right-drag</span> Pan</div>
+  </div>
+
+  <!-- ─── ASSEMBLY OVERLAY ─── -->
+  <div id="asm-overlay">
+    <div class="asm-panel">
+      <div class="asm-header">
+        <div class="asm-title">⚙ Interactive Assembly Guide</div>
+        <button class="asm-close" onclick="closeAssembly()" title="Close">✕</button>
+      </div>
+      <div class="asm-steps" id="asm-tabs">
+        <div class="asm-step-tab active" data-step="0" onclick="goStep(0)"><span class="asm-step-num">1</span>Printer Body</div>
+        <div class="asm-step-tab" data-step="1" onclick="goStep(1)"><span class="asm-step-num">2</span>Cassette</div>
+        <div class="asm-step-tab" data-step="2" onclick="goStep(2)"><span class="asm-step-num">3</span>Screws</div>
+        <div class="asm-step-tab" data-step="3" onclick="goStep(3)"><span class="asm-step-num">4</span>Final Check</div>
+      </div>
+      <div class="asm-content">
+        <!-- Step 1: Printer Body -->
+        <div class="asm-pane active" id="asm-pane-0">
+          <div class="asm-visual">🖨️</div>
+          <div class="asm-info">
+            <div class="asm-step-title">Position the Printer Body</div>
+            <div class="asm-step-desc">Set the WF-C5890 main body on a flat, stable surface with the front panel facing you. Ensure all shipping tape and packaging foam has been removed.</div>
+            <ul class="asm-checklist">
+              <li>Place on a flat, level surface</li>
+              <li>Remove all shipping tape &amp; foam</li>
+              <li>Confirm ink lock tab is visible on the left side</li>
+              <li>Unlock the ink lock tab before proceeding</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Step 2: Cassette -->
+        <div class="asm-pane" id="asm-pane-1">
+          <div class="asm-visual">📄</div>
+          <div class="asm-info">
+            <div class="asm-step-title">Install Cassette 1</div>
+            <div class="asm-step-desc">Slide Cassette 1 (C1) into the front lower slot of the printer. Load up to 250 sheets of plain paper before inserting if desired.</div>
+            <ul class="asm-checklist">
+              <li>Adjust the paper guides to match your paper size</li>
+              <li>Load paper short-edge first, printable side up</li>
+              <li>Do not exceed the MAX fill line</li>
+              <li>Slide cassette in until it clicks firmly into place</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Step 3: Screws -->
+        <div class="asm-pane" id="asm-pane-2">
+          <div class="asm-visual">🔩</div>
+          <div class="asm-info">
+            <div class="asm-step-title">Secure with Screws</div>
+            <div class="asm-step-desc">If installing the optional cabinet or additional paper tray, attach using the provided screws. Use a #2 Phillips screwdriver — do not overtighten.</div>
+            <ul class="asm-checklist">
+              <li>Align cabinet/tray mounting holes first</li>
+              <li>Hand-tighten all screws before final torque</li>
+              <li>Tighten in a cross pattern for even seating</li>
+              <li>Check that unit does not rock after tightening</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Step 4: Final Check -->
+        <div class="asm-pane" id="asm-pane-3">
+          <div class="asm-visual">✅</div>
+          <div class="asm-info">
+            <div class="asm-step-title">Final Assembly Check</div>
+            <div class="asm-step-desc">Before powering on, confirm all components are seated correctly and the printer is ready for initial ink charging.</div>
+            <ul class="asm-checklist">
+              <li>Ink lock tab is in the UNLOCKED position</li>
+              <li>Cassette is fully inserted and level</li>
+              <li>Output tray extender pulled out (if needed)</li>
+              <li>Power cable connected — power on and follow LCD prompts</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="asm-footer">
+        <div class="asm-prog">
+          <div class="asm-prog-bar"><div class="asm-prog-fill" id="asm-prog-fill" style="width:25%"></div></div>
+          <span id="asm-prog-txt">Step 1 of 4</span>
+        </div>
+        <div class="asm-nav">
+          <button class="asm-btn" id="asm-prev" onclick="asmNav(-1)" disabled>← Prev</button>
+          <button class="asm-btn primary" id="asm-next" onclick="asmNav(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ─── END ASSEMBLY OVERLAY ─── -->
+
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="side-panel">
+<div class="sp-card"><div class="sp-card-hdr"><span class="sp-card-icon">📋</span><span class="sp-card-title">TSRs</span></div><div class="sp-card-body">Midwest Rep: Christian Orred<br/><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a7c4c8d5d5c2c3e7c2d7d4c8c989c4c8ca">[email&#160;protected]</a><br/>+1 (940) 293 - 5035</div></div>
+<div class="sp-card"><div class="sp-card-hdr"><span class="sp-card-icon">🔗</span><span class="sp-card-title">Links &amp; Resources</span></div><div class="sp-card-body"><a href="https://files.support.epson.com/docid/cpd6/cpd62472.pdf" target="_blank">Installation Guide</a><br/><a href="https://www.youtube.com/playlist?list=PLiNOSZ0C1ZaqNJwpcVKgFuWD50JKTyd5z" target="_blank">Video Manual</a><br/><a href="https://download4.epson.biz/sec_pubs/wf-c5890_series/useg/en/manual.pdf?pageid=&tab=&LGW=&CNW=&OSV=&EXE=&VER=" target="_blank">User's Guide</a><br/><a href="https://epson.com/business-printing-solutions" target="_blank">Software Solutions</a><br/><a href="https://epsonpartnerportal.com/Support-Categories/Support/Printers/All-In-Ones/WorkForce-Series/Epson-WorkForce-Pro-WF-C5890/s/SPT_C11CK23201" target="_blank">Partner Portal (sign-in req.)</a><br/><a href="https://mediaserver.goepson.com/ImConvServlet/imconv/508e10d3579e5e94a878289f3b6de0ddc76c5e54/original?assetDescr=WorkForce_Pro_WF-C5890_Printer_Specification_Sheet_CPD-62871R1.pdf" target="_blank">Specification Sheet</a></div></div>
+<div class="sp-card"><div class="sp-card-hdr"><span class="sp-card-icon">🔩</span><span class="sp-card-title">Parts &amp; Supplies</span></div><div class="sp-card-body"><a href="https://epson.com/listing?q=%3Arelevance%3AproductRefrenceType%3AC11CK23201%3AproductReftypes%3AACCESSORIES%3AdiscontinuedFlag%3Afalse" target="_blank">Accessories</a><br/><a href="https://epson.com/InkFinder/i/C11CK23201" target="_blank">Replacement Ink</a><br/><a href="https://epson.com/support/replacement-parts" target="_blank">Replacement Parts</a></div></div>
+<div class="sp-card"><div class="sp-card-hdr"><span class="sp-card-icon">📝</span><span class="sp-card-title">Notes</span></div><div class="sp-card-body">
+Still to add:<br/>
+Animation showing ink pack change<br/>
+Animation showing cassette install<br/>
+Animation showing cabinet install<br/>
+Link to Brian's video series on EPA
+<div class="video-wrapper" style="margin-top:10px">
+  <iframe src="https://www.youtube.com/embed/sUwdeMuBnrA?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&loop=1&playlist=sUwdeMuBnrA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+</div></div>
+</div>
+
+</div><!-- end app-body -->
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*
+ * ═══════════════════════════════════════════════════════════════════
+ *  GLB FILE PLACEMENT INSTRUCTIONS
+ * ═══════════════════════════════════════════════════════════════════
+ *  Place these three files in the SAME FOLDER as this HTML file:
+ *
+ *    printer.glb   ← the main WF-C5890 printer body
+ *    cassette.glb  ← the paper cassette / tray
+ *    screws.glb    ← the screw hardware components
+ *
+ *  Folder structure should look like:
+ *    your-folder/
+ *    ├── wf-c5890-3d-explorer-v2_0_0.html   ← this file
+ *    ├── printer.glb
+ *    ├── cassette.glb
+ *    └── screws.glb
+ *
+ *  If hosting on a web server, all four files must be in the same
+ *  directory or update the GLB_FILES paths below accordingly.
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+const GLB_FILES = {
+  printer:  'printer.glb',   // ← UPDATE PATH if files are in a subfolder e.g. 'models/printer.glb'
+  cassette: 'cassette.glb',  // ← UPDATE PATH if files are in a subfolder
+  screws:   'screws.glb'     // ← UPDATE PATH if files are in a subfolder
+};
+
+// ─── Annotations ────────────────────────────────────────────────────
+// Ann coords: X=width(0-425), Y=depth(0=front,672=back), Z=height(0-355)
+// Three mapping: X=X-212.5, Y=Z_ann(height), Z=336-Y_ann(front=+336)
+// Ann normals:   Three_NX=NX, Three_NY=NZ_ann, Three_NZ=-NY_ann
+const ANNOTATIONS = [
+  { id:'rips',   label:'INK',  pos:[212.5, 102,  30],  normal:[0,-1, 0]   },
+  { id:'c1',     label:'C1',   pos:[212.5, 102,  90],  normal:[0,-1, 0]   },
+  { id:'output', label:'OUT',  pos:[212.5,   0, 163],  normal:[0,-1, 0]   },
+  { id:'ui',     label:'UI',   pos:[212.5,  80, 250],  normal:[0,-1, 0.5] },
+  { id:'adf',    label:'ADF',  pos:[212.5, 102, 325],  normal:[0,-1, 0]   },
+  { id:'mp',     label:'MP',   pos:[212.5, 670, 355],  normal:[0, 1, 0]   },
+  { id:'lock',   label:'LCK',  pos:[  2,   102,  30],  normal:[-1, 0, 0]  },
+];
+
+// ─── Renderer & Scene ───────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xc3d7fc);
+scene.fog = new THREE.Fog(0xc3d7fc, 2500, 4500);
+const camera = new THREE.PerspectiveCamera(38, 1, 1, 8000);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.position.set(600, 800, 600);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, {near:10, far:3000, left:-600, right:600, top:600, bottom:-600});
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xaabbff, 0.4);
+fill.position.set(-400, 400, -200);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0x4488ff, 0.2);
+rim.position.set(0, -300, -600);
+scene.add(rim);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(750, 750),
+  new THREE.MeshStandardMaterial({color:0x151e2b, roughness:1})
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+scene.add(new THREE.GridHelper(750, 24, 0x1a2040, 0x161b30));
+
+const orb = {
+  target: new THREE.Vector3(0, 0, 0),
+  r: 950, theta: 0.5, phi: 1.1,
+  drag: false, rDrag: false, lx: 0, ly: 0,
+  update() {
+    const x = this.r * Math.sin(this.phi) * Math.sin(this.theta);
+    const y = this.r * Math.cos(this.phi);
+    const z = this.r * Math.sin(this.phi) * Math.cos(this.theta);
+    camera.position.set(x + this.target.x, y + this.target.y, z + this.target.z);
+    camera.lookAt(this.target);
+  }
+};
+
+let modelGroup = null;
+const modelSize = new THREE.Vector3();
+
+// ─── GLB Loader ─────────────────────────────────────────────────────
+// Minimal GLB parser using Three.js primitives (no GLTFLoader dependency)
+function parseGLB(buffer) {
+  const dv = new DataView(buffer);
+  const jsonLen = dv.getUint32(12, true);
+  const json = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, 20, jsonLen)));
+  const binStart = 20 + jsonLen + 8;
+  const bin = buffer.slice(binStart);
+
+  const accs = json.accessors || [];
+  const bvs  = json.bufferViews || [];
+
+  function getAcc(idx) {
+    if(idx === undefined || idx === null) return null;
+    const a = accs[idx], bv = bvs[a.bufferView];
+    const off = (bv.byteOffset || 0) + (a.byteOffset || 0);
+    const nc = {SCALAR:1, VEC2:2, VEC3:3, VEC4:4}[a.type];
+    if(a.componentType === 5126) return new Float32Array(bin, off, a.count * nc);
+    if(a.componentType === 5125) return new Uint32Array(bin, off, a.count * nc);
+    if(a.componentType === 5123) return new Uint16Array(bin, off, a.count * nc);
+    return null;
+  }
+
+  const matColors = (json.materials || []).map(m => {
+    const cf = (m.pbrMetallicRoughness || {}).baseColorFactor;
+    return cf ? new THREE.Color(cf[0], cf[1], cf[2]) : new THREE.Color(0.8, 0.8, 0.8);
+  });
+
+  const group = new THREE.Group();
+  const meshes = json.meshes || [];
+
+  meshes.forEach(mesh => {
+    (mesh.primitives || []).forEach(prim => {
+      const rawPos = getAcc(prim.attributes.POSITION);
+      const rawNor = prim.attributes.NORMAL !== undefined ? getAcc(prim.attributes.NORMAL) : null;
+      const rawIdx = prim.indices !== undefined ? getAcc(prim.indices) : null;
+      if(!rawPos) return;
+
+      const nv = rawPos.length / 3;
+      // Coordinate remap:
+      //   Three_X =  GLB_X - 212.5
+      //   Three_Y = -GLB_Z
+      //   Three_Z =  GLB_Y - 336
+      const pos = new Float32Array(nv * 3);
+      for(let i = 0; i < nv; i++) {
+        pos[i*3  ] =  rawPos[i*3  ] - 212.5;
+        pos[i*3+1] = -rawPos[i*3+2];
+        pos[i*3+2] =  rawPos[i*3+1] - 336;
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+      if(rawNor) {
+        const nor = new Float32Array(nv * 3);
+        for(let i = 0; i < nv; i++) {
+          nor[i*3  ] =  rawNor[i*3  ];
+          nor[i*3+1] = -rawNor[i*3+2];
+          nor[i*3+2] =  rawNor[i*3+1];
+        }
+        geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      }
+
+      if(rawIdx) {
+        const idx = accs[prim.indices].componentType === 5125
+          ? new Uint32Array(rawIdx)
+          : new Uint16Array(rawIdx);
+        geo.setIndex(new THREE.BufferAttribute(idx, 1));
+      }
+
+      if(!rawNor) geo.computeVertexNormals();
+
+      const matIdx = prim.material !== undefined ? prim.material : 0;
+      const color = matColors[matIdx] || new THREE.Color(0.8, 0.8, 0.8);
+      const mat = new THREE.MeshStandardMaterial({
+        color, roughness: 0.5, metalness: 0.05, side: THREE.FrontSide
+      });
+      const mesh3 = new THREE.Mesh(geo, mat);
+      mesh3.castShadow = mesh3.receiveShadow = true;
+      group.add(mesh3);
+    });
+  });
+
+  return group;
+}
+
+async function fetchGLB(url, label) {
+  document.getElementById('load-progress').textContent = `Loading ${label}…`;
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
+  return await resp.arrayBuffer();
+}
+
+// ─── Part references & tween state ──────────────────────────────────
+// Each part has: group (Three.Group), home (final position), offset (fly-in start)
+const PARTS = {
+  printer:  { group: null, home: new THREE.Vector3(0, 0, 0),    offset: new THREE.Vector3(0, 600, 0)    }, // drops from above
+  cassette: { group: null, home: new THREE.Vector3(0, 0, 0),    offset: new THREE.Vector3(0, 0, 500)    }, // slides in from front
+  screws:   { group: null, home: new THREE.Vector3(0, 0, 0),    offset: new THREE.Vector3(500, 200, 0)  }, // flies in from right side
+};
+
+// Active tweens: [{group, from, to, startTime, duration}]
+const activeTweens = [];
+const TWEEN_MS = 700; // animation duration in ms
+
+function easeCubicOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+function tweenTo(group, toPos, durationMs) {
+  // Remove any existing tween for this group
+  const idx = activeTweens.findIndex(tw => tw.group === group);
+  if(idx !== -1) activeTweens.splice(idx, 1);
+  activeTweens.push({
+    group,
+    from: group.position.clone(),
+    to:   toPos.clone(),
+    startTime: performance.now(),
+    duration: durationMs
+  });
+}
+
+function tickTweens() {
+  const now = performance.now();
+  for(let i = activeTweens.length - 1; i >= 0; i--) {
+    const tw = activeTweens[i];
+    const t = Math.min(1, (now - tw.startTime) / tw.duration);
+    const e = easeCubicOut(t);
+    tw.group.position.lerpVectors(tw.from, tw.to, e);
+    if(t >= 1) activeTweens.splice(i, 1);
+  }
+}
+
+async function loadModels() {
+  try {
+    const [printerBuf, cassetteBuf, screwsBuf] = await Promise.all([
+      fetchGLB(GLB_FILES.printer,  'printer.glb'),
+      fetchGLB(GLB_FILES.cassette, 'cassette.glb'),
+      fetchGLB(GLB_FILES.screws,   'screws.glb'),
+    ]);
+
+    document.getElementById('load-progress').textContent = 'Parsing geometry…';
+
+    modelGroup = new THREE.Group();
+
+    const printerGroup  = parseGLB(printerBuf);
+    const cassetteGroup = parseGLB(cassetteBuf);
+    const screwsGroup   = parseGLB(screwsBuf);
+
+    printerGroup.name  = 'printer';
+    cassetteGroup.name = 'cassette';
+    screwsGroup.name   = 'screws';
+
+    PARTS.printer.group  = printerGroup;
+    PARTS.cassette.group = cassetteGroup;
+    PARTS.screws.group   = screwsGroup;
+
+    // Start all parts at home position (fully assembled view on load)
+    printerGroup.position.copy(PARTS.printer.home);
+    cassetteGroup.position.copy(PARTS.cassette.home);
+    screwsGroup.position.copy(PARTS.screws.home);
+
+    modelGroup.add(printerGroup, cassetteGroup, screwsGroup);
+    modelGroup.position.set(0, 0, 0);
+    modelSize.set(425, 355, 672);
+    scene.add(modelGroup);
+
+    orb.target.set(0, 355 * 0.35, 0);
+    orb.update();
+    document.getElementById('loading').style.display = 'none';
+    updateDots();
+
+  } catch(err) {
+    console.error('GLB load failed:', err);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('model-error').classList.add('show');
+  }
+}
+
+// ─── Controls ───────────────────────────────────────────────────────
+const wrap = document.querySelector('.viewer-wrap');
+wrap.addEventListener('mousedown', e => {
+  if(e.button === 2) orb.rDrag = true; else orb.drag = true;
+  orb.lx = e.clientX; orb.ly = e.clientY;
+});
+window.addEventListener('mouseup', () => { orb.drag = orb.rDrag = false; });
+window.addEventListener('mousemove', e => {
+  const dx = e.clientX - orb.lx, dy = e.clientY - orb.ly;
+  orb.lx = e.clientX; orb.ly = e.clientY;
+  if(orb.drag) {
+    orb.theta -= dx * 0.008;
+    orb.phi = Math.max(0.1, Math.min(Math.PI * 0.47, orb.phi + dy * 0.008));
+    orb.update(); updateDots();
+  }
+  if(orb.rDrag) {
+    const cd = new THREE.Vector3(); camera.getWorldDirection(cd);
+    const right = new THREE.Vector3().crossVectors(cd, camera.up).normalize();
+    const up = new THREE.Vector3().crossVectors(right, cd).normalize();
+    const p = orb.r * 0.001;
+    orb.target.addScaledVector(right, -dx * p).addScaledVector(up, dy * p);
+    orb.update(); updateDots();
+  }
+});
+wrap.addEventListener('wheel', e => {
+  orb.r = Math.max(200, Math.min(3000, orb.r + e.deltaY * 0.8));
+  orb.update(); updateDots(); e.preventDefault();
+}, {passive: false});
+wrap.addEventListener('contextmenu', e => e.preventDefault());
+
+let _t = {};
+wrap.addEventListener('touchstart', e => {
+  [...e.touches].forEach(t => _t[t.identifier] = {x: t.clientX, y: t.clientY});
+}, {passive: true});
+wrap.addEventListener('touchmove', e => {
+  if(e.touches.length === 1) {
+    const t = e.touches[0], p = _t[t.identifier] || {x: t.clientX, y: t.clientY};
+    orb.theta -= (t.clientX - p.x) * 0.01;
+    orb.phi = Math.max(0.1, Math.min(Math.PI * 0.47, orb.phi + (t.clientY - p.y) * 0.01));
+    orb.update(); updateDots(); _t[t.identifier] = {x: t.clientX, y: t.clientY};
+  }
+  e.preventDefault();
+}, {passive: false});
+
+// ─── Annotation Dots ────────────────────────────────────────────────
+const dotEls = {};
+function createDots() {
+  ANNOTATIONS.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'ann-dot'; d.textContent = a.label;
+    d.addEventListener('click', () => selectComp(a.id));
+    wrap.appendChild(d); dotEls[a.id] = d;
+  });
+}
+
+const _wp = new THREE.Vector3(), _cd = new THREE.Vector3(), _an = new THREE.Vector3();
+function updateDots() {
+  if(!modelGroup) return;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  camera.getWorldDirection(_cd);
+  ANNOTATIONS.forEach(a => {
+    const d = dotEls[a.id];
+    _wp.set(a.pos[0] - 212.5, a.pos[2], 336 - a.pos[1]);
+    _an.set(a.normal[0], a.normal[2], -a.normal[1]);
+    if(_an.dot(_cd) > 0.2) { d.classList.add('hidden'); return; }
+    const p = _wp.clone().project(camera);
+    const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H;
+    if(p.z > 1 || sx < 0 || sx > W || sy < 0 || sy > H) { d.classList.add('hidden'); return; }
+    d.classList.remove('hidden');
+    d.style.left = sx + 'px'; d.style.top = sy + 'px';
+  });
+}
+
+function selectComp(id) {
+  Object.values(dotEls).forEach(d => d.classList.remove('active'));
+  dotEls[id]?.classList.add('active');
+  document.getElementById('ip-empty').style.display = 'none';
+  document.querySelectorAll('.ip-comp').forEach(el => el.classList.remove('active'));
+  document.getElementById('info-' + id)?.classList.add('active');
+}
+
+// ─── Assembly Guide ──────────────────────────────────────────────────
+let asmCurrentStep = 0;
+const ASM_TOTAL = 4;
+
+/*
+ * Assembly step definitions — each step controls which parts are
+ * "seated" (at home) vs "floated out" (at their offset position).
+ *
+ * Step 0: all parts floated out (exploded view to start)
+ * Step 1: printer flies into home
+ * Step 2: cassette flies into home
+ * Step 3: screws fly into home  (all assembled)
+ * Step 4: final check — all at home, no highlight
+ */
+const STEP_STATES = [
+  // step 0 — start: all parts at offset (exploded)
+  { printer:'offset', cassette:'offset', screws:'offset', highlight:'printer'  },
+  // step 1 — printer lands
+  { printer:'home',   cassette:'offset', screws:'offset', highlight:'printer'  },
+  // step 2 — cassette slides in
+  { printer:'home',   cassette:'home',   screws:'offset', highlight:'cassette' },
+  // step 3 — screws fly in
+  { printer:'home',   cassette:'home',   screws:'home',   highlight:'screws'   },
+  // step 4 — final check, all seated, no highlight
+  { printer:'home',   cassette:'home',   screws:'home',   highlight:null       },
+];
+
+function applyStepState(step) {
+  if(!PARTS.printer.group) return; // models not loaded yet
+  const state = STEP_STATES[Math.min(step, STEP_STATES.length - 1)];
+
+  ['printer','cassette','screws'].forEach(name => {
+    const part = PARTS[name];
+    const target = state[name] === 'home' ? part.home : part.offset;
+    tweenTo(part.group, target, TWEEN_MS);
+
+    // Emissive highlight
+    part.group.traverse(obj => {
+      if(!obj.isMesh) return;
+      if(state.highlight === name) {
+        obj.material.emissive = new THREE.Color(0x003388);
+        obj.material.emissiveIntensity = 0.3;
+      } else {
+        obj.material.emissive = new THREE.Color(0x000000);
+        obj.material.emissiveIntensity = 0;
+      }
+    });
+  });
+}
+
+function openAssembly() {
+  document.getElementById('asm-overlay').classList.add('visible');
+  goStep(0);
+}
+
+function closeAssembly() {
+  document.getElementById('asm-overlay').classList.remove('visible');
+  // Fly all parts back to home when closing
+  ['printer','cassette','screws'].forEach(name => {
+    const part = PARTS[name];
+    if(part.group) {
+      tweenTo(part.group, part.home, TWEEN_MS);
+      part.group.traverse(obj => {
+        if(obj.isMesh) { obj.material.emissive.set(0,0,0); obj.material.emissiveIntensity = 0; }
+      });
+    }
+  });
+}
+
+function goStep(step) {
+  asmCurrentStep = step;
+  document.querySelectorAll('.asm-step-tab').forEach((t, i) => t.classList.toggle('active', i === step));
+  document.querySelectorAll('.asm-pane').forEach((p, i) => p.classList.toggle('active', i === step));
+  const pct = Math.round(((step + 1) / ASM_TOTAL) * 100);
+  document.getElementById('asm-prog-fill').style.width = pct + '%';
+  document.getElementById('asm-prog-txt').textContent = `Step ${step + 1} of ${ASM_TOTAL}`;
+  document.getElementById('asm-prev').disabled = step === 0;
+  const nextBtn = document.getElementById('asm-next');
+  if(step === ASM_TOTAL - 1) {
+    nextBtn.textContent = '✓ Done';
+    nextBtn.onclick = closeAssembly;
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.onclick = () => asmNav(1);
+  }
+  applyStepState(step);
+}
+
+function asmNav(dir) {
+  goStep(Math.max(0, Math.min(ASM_TOTAL - 1, asmCurrentStep + dir)));
+}
+
+// Close overlay when clicking backdrop
+document.getElementById('asm-overlay').addEventListener('click', e => {
+  if(e.target === document.getElementById('asm-overlay')) closeAssembly();
+});
+
+// ─── Resize & Render Loop ────────────────────────────────────────────
+function resize() {
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  renderer.setSize(W, H);
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  updateDots();
+}
+window.addEventListener('resize', resize);
+
+function animate() {
+  requestAnimationFrame(animate);
+  tickTweens();
+  updateDots();
+  renderer.render(scene, camera);
+}
+// ─── Init ────────────────────────────────────────────
+resize();
+orb.update();
+createDots();
+animate();
+loadModels();
+</script>
+</body>
+</html>
